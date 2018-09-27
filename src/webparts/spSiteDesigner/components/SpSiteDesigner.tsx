@@ -4,8 +4,15 @@ import { ISpSiteDesignerProps } from './ISpSiteDesignerProps';
 import { escape } from '@microsoft/sp-lodash-subset';
 import { SPHttpClient, ISPHttpClientOptions, SPHttpClientConfiguration, SPHttpClientResponse } from '@microsoft/sp-http';
 export interface ISpSiteDesignerState {
-  siteScriptResults: any;
-  siteScriptData: string;
+  siteScriptResults?: any;
+  siteDesignResults?: any;
+  siteScriptData?: string;
+  siteScriptTitle?: string;
+  siteDesignTitle?: string;
+  siteDesignDescription?: string;
+  siteDesignWebTemplate?: number;
+  siteDesignPreviewImageUrl?: string;
+  siteDesignPreviewImageAltText?: string;
 }
 
 export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps, ISpSiteDesignerState> {
@@ -13,38 +20,40 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     super(props);
     this.state = {
       siteScriptData: null,
-      siteScriptResults: null
+      siteScriptResults: null,
+      siteScriptTitle: null
     }
-    this._handleSiteScriptChange = this._handleSiteScriptChange.bind(this);
+    this._handleInputChange = this._handleInputChange.bind(this);
   }
-  // private RestRequest(url: string, params?: any): any {
-  //   const req = new XMLHttpRequest();
-  //   req.onreadystatechange = function () {
-  //     if (req.readyState != 4) // Loaded
-  //       return;
-  //     console.log(req.responseText);
-  //   };
 
-  //   // Prepend web URL to url and remove duplicated slashes.
-  //   const webBasedUrl = (this.props.context.pageContext.web.absoluteUrl + url).replace(/\/{2,}/, "/");
-  //   console.log(this.props.context.pageContext.web.absoluteUrl);
-  //   console.log(webBasedUrl);
 
-  //   // https://itgroovedeveloper.sharepoint.com/itgroovedeveloper.sharepoint.com/sites/mattdev///_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.CreateSiteScript(Title=@title)?@title=%27Contoso%20theme%20script%27
-  //   console.log(url)
+  public baseUrl: string = '/';
 
-  //   req.open("POST", webBasedUrl, true);
-  //   req.setRequestHeader("Content-Type", "application/json;charset=utf-8");
-  //   req.setRequestHeader("ACCEPT", "application/json; odata.metadata=minimal");
-  //   req.setRequestHeader("x-requestdigest", this.props.context.pageContext.web.absoluteUrl.requestdigest);
-  //   req.setRequestHeader("ODATA-VERSION", "4.0");
-  //   req.send(params ? JSON.stringify(params) : void 0);
-  // }
+  private _getEffectiveUrl(relativeUrl: string): string {
+    return (this.baseUrl + '//' + relativeUrl).replace(/\/{2,}/, '/');
+  }
 
-  
+  private _restRequest(url: string, params: any = null): Promise<any> {
+    const restUrl = this._getEffectiveUrl(url);
+    const options: ISPHttpClientOptions = {
+      body: JSON.stringify(params),
+      headers: {
+        'Content-Type': 'application/json;charset=utf-8',
+        ACCEPT: 'application/json; odata.metadata=minimal',
+        'ODATA-VERSION': '4.0'
+      }
+    };
+    return this.props.context.spHttpClient.post(restUrl, SPHttpClient.configurations.v1, options).then((response) => {
+      if (response.status == 204) {
+        return {};
+      } else {
+        return response.json();
+      }
+    });
+  }
 
   private site_script: string =
-  `{
+    `{
     "$schema": "schema.json",
     "actions": [
       {
@@ -56,74 +65,66 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     "version": 1
   }`;
 
-  private _createSiteScript(siteScriptData: any): any {
-
-    const spOpts: ISPHttpClientOptions = {
-      body: siteScriptData
-    };
-
-    const url = "/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.CreateSiteScript(Title=@title)?@title='Contoso theme script'";
-    return this.props.context.spHttpClient.post(`${this.props.context.pageContext.web.absoluteUrl}${url}`, SPHttpClient.configurations.v1, spOpts)
-      .then((response: SPHttpClientResponse) => {
-        response.json().then((responseJSON: JSON) => {
-          console.log(responseJSON);
-        });
-      });
+  private _createSiteScript(siteScriptTitle: string, siteScriptData: any): any {
+    siteScriptData = JSON.parse(siteScriptData);
+    return this._restRequest(
+      `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.CreateSiteScript(Title=@title)?@title='${siteScriptTitle}'`,
+      siteScriptData
+    );
   }
 
   private _getSiteScripts(): any {
-    const url = "/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteScripts";
-    return this.props.context.spHttpClient.post(`${this.props.context.pageContext.web.absoluteUrl}${url}`, SPHttpClient.configurations.v1)
-      .then((response: SPHttpClientResponse) => {
-        response.json().then((responseJSON: any) => {
-          this.setState({
-            siteScriptResults: responseJSON.value
-          })
-        });
-      });
+    return this._restRequest(
+      `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteScripts`
+    ).then((response) => {
+      this.setState({
+        siteScriptResults: response.value
+      })
+    });
   }
-
-  // private _getSiteScriptMetadata(id: string): any {
-  //   return this.RestRequest("/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteScriptMetadata",
-  //     { id: id });
-  // }
 
   private _getSiteScriptMetadata(id: string): any {
-
-    const spOpts: ISPHttpClientOptions = {
-      body: JSON.stringify(id),
-      headers: {
-        'Content-Type': 'application/json;charset=utf-8',
-        ACCEPT: 'application/json; odata.metadata=minimal',
-        'ODATA-VERSION': '4.0'
-      }
-    };
-
-    const url = "/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteScriptMetadata";
-    return this.props.context.spHttpClient.post(`${this.props.context.pageContext.web.absoluteUrl}${url}`, SPHttpClient.configurations.v1, spOpts)
-      .then((response: SPHttpClientResponse) => {
-        response.json().then((responseJSON: JSON) => {
-          console.log(responseJSON);
-        });
-      });
+    return this._restRequest(
+      `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteScriptMetadata`,
+      id
+    ).then((response) => {
+      console.log(response);
+    });
   }
 
-  // private _createSiteDesign(): any {
-  //   return this.RestRequest("/_api / Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.CreateSiteDesign", {
-  //     info: {
-  //       Title: "Contoso customer tracking",
-  //       Description: "Creates customer list and applies standard theme",
-  //       SiteScriptIds: ["07702c07-0485-426f-b710-4704241caad9"],
-  //       WebTemplate: "64",
-  //       PreviewImageUrl: "https://contoso.sharepoint.com/SiteAssets/contoso-design.png",
-  //       PreviewImageAltText: "Customer tracking site design theme"
-  //     }
-  //   });
-  // }
+  private _deleteSiteScript(id: string): any {
+    return this._restRequest(
+      `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.DeleteSiteScript`,
+      id
+    ).then((response) => {
+      console.log(response);
+    });
+  }
 
-  // private _getSiteDesign(): any {
-  //   return this.RestRequest("/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteDesigns");
-  // }
+  private _createSiteDesign(): any {
+    return this._restRequest("/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.CreateSiteDesign", {
+      info: {
+        Title: this.state.siteDesignTitle,
+        Description: this.state.siteDesignDescription,
+        SiteScriptIds: ["07702c07-0485-426f-b710-4704241caad9"],
+        WebTemplate: this.state.siteDesignWebTemplate,
+        PreviewImageUrl: this.state.siteDesignPreviewImageUrl,
+        PreviewImageAltText: this.state.siteDesignPreviewImageAltText
+      }
+    }).then((response) => {
+      console.log(response);
+    });
+  }
+
+  private _getSiteDesigns(): any {
+    return this._restRequest(
+      `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteDesigns`
+    ).then((response) => {
+      this.setState({
+        siteDesignResults: response.value
+      })
+    });
+  }
 
   // private _getSiteDesignMetadata(): any {
   //   this.RestRequest("/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteDesignMetadata",
@@ -131,16 +132,28 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
   // }
 
   private _handleCreateSiteScriptClick(): any {
-    this._createSiteScript(this.state.siteScriptData);
+    this._createSiteScript(this.state.siteScriptTitle, this.state.siteScriptData);
+  }
+
+  private _handleCreateSiteDesignClick(): any {
+    this._createSiteDesign();
   }
 
   private _handleGetSiteScriptClick(): any {
-    console.log(this._getSiteScripts());
+    this._getSiteScripts();
   }
 
-  private _handleSiteScriptChange(event: any): any {
+  private _handleGetSiteDesignClick(): any {
+    this._getSiteDesigns();
+  }
+
+  private _handleInputChange(event: any): any {
+    const target = event.target;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    const name = target.name;
+    console.log(name)
     this.setState({
-      siteScriptData: event.target.value
+      [name]: value
     });
   }
 
@@ -151,22 +164,98 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     this._getSiteScriptMetadata(siteScript);
   }
 
+  private _handleDeleteSiteScript(id: string): any {
+    const siteScript: any = {
+      id: id
+    }
+    let shouldDelete: boolean = confirm("Are you sure you want to delete this script?");
+    if (shouldDelete) {
+      this._deleteSiteScript(siteScript);
+    }
+  }
+
+  public _groupSiteScriptsBySiteDesign(siteScripts, siteDesigns) {
+    const siteDesignsWithSiteScripts = [];
+    // each site design
+    for (var i = 0; i < siteDesigns.length; i++) {
+      const siteScriptsInSiteDesign = [];
+      // each script in the design
+      for (var k = 0; k < siteDesigns[i].SiteScriptIds.length; k++) {
+        // compare to overall list of scripts
+        for (var j = 0; j < siteScripts.length; j++) {
+          if (siteDesigns[i].SiteScriptIds[k] === siteScripts[j].Id) {
+            siteScriptsInSiteDesign.push(siteScripts[j]);
+          }
+        }
+      }
+      siteDesigns[i].SiteScripts = siteScriptsInSiteDesign;
+      siteDesignsWithSiteScripts.push(siteDesigns[i]);
+    }
+    return siteDesignsWithSiteScripts;
+  }
+
   public render(): React.ReactElement<ISpSiteDesignerProps> {
-    const { siteScriptResults } = this.state;
+    const { siteScriptResults, siteDesignResults } = this.state;
+
+    let siteDesignsWithSiteScripts;
+    if (siteScriptResults && siteScriptResults) {
+      siteDesignsWithSiteScripts = this._groupSiteScriptsBySiteDesign(siteScriptResults, siteDesignResults);
+    }
+
     return (
-      <div className={styles.spSiteDesigner}>
-        <textarea id="siteScript" value={this.state.siteScriptData} onChange={this._handleSiteScriptChange}></textarea>
-        <button onClick={() => this._handleCreateSiteScriptClick()}>Create Site Script</button>
+      <div className={styles.spSiteDesigner} >
 
         <button onClick={() => this._handleGetSiteScriptClick()}>Get Site Scripts</button>
+        <button onClick={() => this._handleGetSiteDesignClick()}>Get Site Designs</button>
+
+        <div>
+          <form>
+            <div><input id="siteScriptTitle" name="siteScriptTitle" value={this.state.siteScriptTitle} onChange={this._handleInputChange}></input></div>
+            <div><textarea id="siteScriptData" name="siteScriptData" value={this.state.siteScriptData} onChange={this._handleInputChange}></textarea></div>
+          </form>
+          <button onClick={() => this._handleCreateSiteScriptClick()}>Create Site Script</button>
+        </div>
+
+
+
+        <div>
+          <form>
+            <div><input name="siteDesignTitle" value={this.state.siteDesignTitle} onChange={this._handleInputChange} /></div>
+            <div><input name="siteDesignDescription" value={this.state.siteDesignDescription} onChange={this._handleInputChange} /></div>
+            <div><input name="siteDesignWebTemplate" value={this.state.siteDesignWebTemplate} onChange={this._handleInputChange} /></div>
+            <div><input name="siteDesignPreviewImageUrl" value={this.state.siteDesignPreviewImageUrl} onChange={this._handleInputChange} /></div>
+            <div><input name="siteDesignPreviewImageAltText" value={this.state.siteDesignPreviewImageAltText} onChange={this._handleInputChange} /></div >
+          </form>
+          <button onClick={() => this._handleCreateSiteDesignClick()}>Create Site Design</button>
+        </div>
 
         <ul>
-        {siteScriptResults && siteScriptResults.map(siteScript => 
-            <li>{siteScript.Title} 
+          {siteScriptResults && siteScriptResults.map(siteScript =>
+            <li>{siteScript.Title}
               <button onClick={() => this._handleSiteScriptEdit(siteScript.Id)}>Edit</button>
+              <button onClick={() => this._handleDeleteSiteScript(siteScript.Id)}>Delete</button>
             </li>
           )}
         </ul>
+
+        <ul>
+          {siteDesignResults && siteDesignResults.map(siteDesign =>
+            <li>{siteDesign.Title}
+              {/* <button onClick={() => this._handlesiteDesignEdit(siteDesign.Id)}>Edit</button>
+              <button onClick={() => this._handleDeletesiteDesign(siteDesign.Id)}>Delete</button> */}
+            </li>
+          )}
+        </ul>
+
+        {siteDesignsWithSiteScripts && 
+          <ul>
+            {siteDesignsWithSiteScripts.map(siteDesign =>
+            <li>{siteDesign.Title}</li>
+            )}
+          </ul>
+        
+        }
+        
 
       </div>
     );
