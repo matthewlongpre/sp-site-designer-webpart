@@ -3,16 +3,22 @@ import styles from './SpSiteDesigner.module.scss';
 import { ISpSiteDesignerProps } from './ISpSiteDesignerProps';
 import { escape } from '@microsoft/sp-lodash-subset';
 import { SPHttpClient, ISPHttpClientOptions, SPHttpClientConfiguration, SPHttpClientResponse } from '@microsoft/sp-http';
+
+import DualListBox from 'react-dual-listbox';
+import 'react-dual-listbox/lib/react-dual-listbox.css';
+
 export interface ISpSiteDesignerState {
   siteScriptResults?: any;
   siteDesignResults?: any;
   siteScriptData?: string;
   siteScriptTitle?: string;
   siteDesignTitle?: string;
+  selectedSiteDesignID?: string;
   siteDesignDescription?: string;
   siteDesignWebTemplate?: number;
   siteDesignPreviewImageUrl?: string;
   siteDesignPreviewImageAltText?: string;
+  selectedSiteScripts?: any;
 }
 
 export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps, ISpSiteDesignerState> {
@@ -21,11 +27,27 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     this.state = {
       siteScriptData: null,
       siteScriptResults: null,
-      siteScriptTitle: null
+      siteScriptTitle: null,
+      selectedSiteScripts: []
     }
     this._handleInputChange = this._handleInputChange.bind(this);
   }
 
+  public componentDidMount() {
+    this._loadData();
+  }
+
+  public _loadData() {
+    this._reset();
+    this._getSiteScripts();
+    this._getSiteDesigns();
+  }
+
+  public _reset() {
+    this.setState({
+      selectedSiteDesignID: undefined
+    })
+  }
 
   public baseUrl: string = '/';
 
@@ -102,17 +124,44 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
   }
 
   private _createSiteDesign(): any {
+    if (this.state.selectedSiteDesignID) {
+      return this._restRequest("/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.UpdateSiteDesign", {
+        updateInfo: {
+          Title: this.state.siteDesignTitle,
+          Id: this.state.selectedSiteDesignID,
+          Description: this.state.siteDesignDescription,
+          SiteScriptIds: this.state.selectedSiteScripts,
+          WebTemplate: this.state.siteDesignWebTemplate,
+          PreviewImageUrl: this.state.siteDesignPreviewImageUrl,
+          PreviewImageAltText: this.state.siteDesignPreviewImageAltText
+        }
+      }).then((response) => {
+        console.log(response);
+        this._loadData();
+      });
+    }
     return this._restRequest("/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.CreateSiteDesign", {
       info: {
         Title: this.state.siteDesignTitle,
         Description: this.state.siteDesignDescription,
-        SiteScriptIds: ["07702c07-0485-426f-b710-4704241caad9"],
+        SiteScriptIds: this.state.selectedSiteScripts,
         WebTemplate: this.state.siteDesignWebTemplate,
         PreviewImageUrl: this.state.siteDesignPreviewImageUrl,
         PreviewImageAltText: this.state.siteDesignPreviewImageAltText
       }
     }).then((response) => {
       console.log(response);
+      this._loadData();
+    });
+  }
+
+  private _deleteSiteDesign(id: string): any {
+    return this._restRequest(
+      `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.DeleteSiteDesign`,
+      id
+    ).then((response) => {
+      console.log(response);
+      this._loadData();
     });
   }
 
@@ -126,6 +175,23 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     });
   }
 
+  private _getSiteDesignMetadata(id: string): any {
+    return this._restRequest(
+      `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteDesignMetadata`,
+      id
+    ).then((response) => {
+      console.log(response);
+      this.setState({
+        selectedSiteDesignID: response.Id,
+        siteDesignTitle: response.Title,
+        siteDesignDescription: response.Description,
+        selectedSiteScripts: response.SiteScriptIds,
+        siteDesignWebTemplate: response.WebTemplate,
+        siteDesignPreviewImageUrl: response.PreviewImageUrl,
+        siteDesignPreviewImageAltText: response.PreviewImageAltText
+      })
+    });
+  }
   // private _getSiteDesignMetadata(): any {
   //   this.RestRequest("/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteDesignMetadata",
   //     { id: "614f9b28-3e85-4ec9-a961-5971ea086cca" });
@@ -140,10 +206,12 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
   }
 
   private _handleGetSiteScriptClick(): any {
+    this._reset();
     this._getSiteScripts();
   }
 
   private _handleGetSiteDesignClick(): any {
+    this._reset();
     this._getSiteDesigns();
   }
 
@@ -151,7 +219,6 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     const target = event.target;
     const value = target.type === 'checkbox' ? target.checked : target.value;
     const name = target.name;
-    console.log(name)
     this.setState({
       [name]: value
     });
@@ -164,6 +231,13 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     this._getSiteScriptMetadata(siteScript);
   }
 
+  private _handleSiteDesignEdit(id: string): any {
+    const siteDesign: any = {
+      id: id
+    }
+    this._getSiteDesignMetadata(siteDesign);
+  }
+
   private _handleDeleteSiteScript(id: string): any {
     const siteScript: any = {
       id: id
@@ -171,6 +245,16 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     let shouldDelete: boolean = confirm("Are you sure you want to delete this script?");
     if (shouldDelete) {
       this._deleteSiteScript(siteScript);
+    }
+  }
+
+  private _handleDeleteSiteDesign(id: string): any {
+    const siteDesign: any = {
+      id: id
+    }
+    let shouldDelete: boolean = confirm("Are you sure you want to delete this Design?");
+    if (shouldDelete) {
+      this._deleteSiteDesign(siteDesign);
     }
   }
 
@@ -195,11 +279,21 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
   }
 
   public render(): React.ReactElement<ISpSiteDesignerProps> {
-    const { siteScriptResults, siteDesignResults } = this.state;
+    const { siteScriptResults, siteDesignResults, selectedSiteScripts } = this.state;
 
     let siteDesignsWithSiteScripts;
     if (siteScriptResults && siteScriptResults) {
       siteDesignsWithSiteScripts = this._groupSiteScriptsBySiteDesign(siteScriptResults, siteDesignResults);
+    }
+
+    let siteScriptOptions;
+    if (siteScriptResults) {
+      siteScriptOptions = siteScriptResults.map((option) => {
+        let r: any = {};
+        r.label = option.Title;
+        r.value = option.Id
+        return r;
+      });
     }
 
     return (
@@ -224,10 +318,37 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
             <div><input name="siteDesignDescription" value={this.state.siteDesignDescription} onChange={this._handleInputChange} /></div>
             <div><input name="siteDesignWebTemplate" value={this.state.siteDesignWebTemplate} onChange={this._handleInputChange} /></div>
             <div><input name="siteDesignPreviewImageUrl" value={this.state.siteDesignPreviewImageUrl} onChange={this._handleInputChange} /></div>
-            <div><input name="siteDesignPreviewImageAltText" value={this.state.siteDesignPreviewImageAltText} onChange={this._handleInputChange} /></div >
+            <div><input name="siteDesignPreviewImageAltText" value={this.state.siteDesignPreviewImageAltText} onChange={this._handleInputChange} /></div>
+            {siteScriptOptions && <DualListBox
+              availableLabel="Available Site Scripts"
+              selectedLabel="Added to Site Design"
+              simpleValue={true}
+              options={siteScriptOptions}
+              selected={selectedSiteScripts}
+              onChange={(selectedSiteScripts) => {
+                this.setState({ selectedSiteScripts });
+              }}
+            />}
           </form>
           <button onClick={() => this._handleCreateSiteDesignClick()}>Create Site Design</button>
         </div>
+
+        <ul>
+          {siteDesignResults && siteDesignResults.map(siteDesign =>
+            <li>{siteDesign.Title}
+              <button onClick={() => this._handleSiteDesignEdit(siteDesign.Id)}>Edit</button>
+              <button onClick={() => this._handleDeleteSiteDesign(siteDesign.Id)}>Delete</button>
+            </li>
+          )}
+        </ul>
+
+        {/* {siteDesignsWithSiteScripts &&
+          <ul>
+            {siteDesignsWithSiteScripts.map(siteDesign =>
+              <li>{siteDesign.Title}</li>
+            )}
+          </ul>
+        } */}
 
         <ul>
           {siteScriptResults && siteScriptResults.map(siteScript =>
@@ -237,25 +358,6 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
             </li>
           )}
         </ul>
-
-        <ul>
-          {siteDesignResults && siteDesignResults.map(siteDesign =>
-            <li>{siteDesign.Title}
-              {/* <button onClick={() => this._handlesiteDesignEdit(siteDesign.Id)}>Edit</button>
-              <button onClick={() => this._handleDeletesiteDesign(siteDesign.Id)}>Delete</button> */}
-            </li>
-          )}
-        </ul>
-
-        {siteDesignsWithSiteScripts && 
-          <ul>
-            {siteDesignsWithSiteScripts.map(siteDesign =>
-            <li>{siteDesign.Title}</li>
-            )}
-          </ul>
-        
-        }
-        
 
       </div>
     );
