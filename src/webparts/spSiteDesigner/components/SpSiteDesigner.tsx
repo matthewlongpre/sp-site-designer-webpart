@@ -301,11 +301,9 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
   }
 
   public editorDidMount(editor, monaco) {
-    console.log('editorDidMount', editor);
     editor.focus();
   }
   public _handleEditorChange(newValue, e) {
-    console.log('onChange', newValue, e);
     this.setState({
       editingSelectedSiteScriptContent: newValue
     });
@@ -353,7 +351,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
 
               <MonacoEditor
                 width="600"
-                height="600"
+                height="300"
                 language="json"
                 theme="vs-light"
                 value={this.state.editingSelectedSiteScriptContent}
