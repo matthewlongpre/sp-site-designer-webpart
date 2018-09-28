@@ -4,6 +4,8 @@ import { ISpSiteDesignerProps } from './ISpSiteDesignerProps';
 import { escape } from '@microsoft/sp-lodash-subset';
 import { SPHttpClient, ISPHttpClientOptions, SPHttpClientConfiguration, SPHttpClientResponse } from '@microsoft/sp-http';
 
+import MonacoEditor from 'react-monaco-editor';
+
 import DualListBox from 'react-dual-listbox';
 import 'react-dual-listbox/lib/react-dual-listbox.css';
 
@@ -40,6 +42,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     };
     this._handleInputChange = this._handleInputChange.bind(this);
     this._handleCreateSiteScriptClick = this._handleCreateSiteScriptClick.bind(this);
+    this._handleEditorChange = this._handleEditorChange.bind(this);
   }
 
   public componentDidMount() {
@@ -95,6 +98,18 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
 
   private _saveSiteScript(siteScriptTitle: string, siteScriptData: string): any {
     siteScriptData = JSON.parse(siteScriptData);
+    if (this.state.selectedSiteScriptID) {
+      // UpdateSiteScript
+      return this._restRequest(
+        `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.UpdateSiteScript`, {
+          updateInfo: {
+            Id: this.state.selectedSiteScriptID,
+            Title: this.state.editingSelectedSiteScriptTitle,
+            Content: this.state.editingSelectedSiteScriptContent
+          }
+        }
+      );      
+    }
     return this._restRequest(
       `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.CreateSiteScript(Title=@title)?@title='${siteScriptTitle}'`,
       siteScriptData
@@ -285,9 +300,25 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     return siteDesignsWithSiteScripts;
   }
 
+  public editorDidMount(editor, monaco) {
+    console.log('editorDidMount', editor);
+    editor.focus();
+  }
+  public _handleEditorChange(newValue, e) {
+    console.log('onChange', newValue, e);
+    this.setState({
+      editingSelectedSiteScriptContent: newValue
+    });
+  }
+
   public render(): React.ReactElement<ISpSiteDesignerProps> {
 
     const { loading, siteScriptResults, siteDesignResults, selectedSiteScripts } = this.state;
+
+
+    const options = {
+      selectOnLineNumbers: true
+    };
 
     let siteDesignsWithSiteScripts;
     if (siteScriptResults && siteScriptResults) {
@@ -318,7 +349,22 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
           <h2>Site Script</h2>
           <form>
             <div><div>Title</div><input id="siteScriptTitle" name="editingSelectedSiteScriptTitle" value={this.state.editingSelectedSiteScriptTitle} onChange={this._handleInputChange}></input></div>
-            <div><div>JSON</div><textarea style={{width:'400px'}} id="siteScriptData" name="editingSelectedSiteScriptContent" value={this.state.editingSelectedSiteScriptContent} onChange={this._handleInputChange}></textarea></div>
+            <div><div>JSON</div>
+
+              <MonacoEditor
+                width="600"
+                height="600"
+                language="json"
+                theme="vs-light"
+                value={this.state.editingSelectedSiteScriptContent}
+                options={options}
+                onChange={this._handleEditorChange}
+                editorDidMount={this.editorDidMount}
+              />
+
+              {/* <textarea style={{width:'400px'}} id="siteScriptData" name="editingSelectedSiteScriptContent" value={this.state.editingSelectedSiteScriptContent} onChange={this._handleInputChange}></textarea> */}
+
+            </div>
           </form>
           <button onClick={this._handleCreateSiteScriptClick}>Save Site Script</button>
         </div>
