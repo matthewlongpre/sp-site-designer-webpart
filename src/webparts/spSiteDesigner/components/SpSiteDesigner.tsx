@@ -99,7 +99,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
   private _saveSiteScript(siteScriptTitle: string, siteScriptData: string): any {
     siteScriptData = JSON.parse(siteScriptData);
     if (this.state.selectedSiteScriptID) {
-      // UpdateSiteScript
+      // Update Site Script
       return this._restRequest(
         `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.UpdateSiteScript`, {
           updateInfo: {
@@ -110,6 +110,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
         }
       );      
     }
+    // Create Site Script
     return this._restRequest(
       `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.CreateSiteScript(Title=@title)?@title='${siteScriptTitle}'`,
       siteScriptData
@@ -144,6 +145,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
 
   private _saveSiteDesign(): any {
     if (this.state.selectedSiteDesignID) {
+      // Update Site Design
       return this._restRequest("/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.UpdateSiteDesign", {
         updateInfo: {
           Title: this.state.siteDesignTitle,
@@ -159,6 +161,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
         this._loadData();
       });
     }
+    // Create Site Design
     return this._restRequest("/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.CreateSiteDesign", {
       info: {
         Title: this.state.siteDesignTitle,
@@ -196,15 +199,6 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       id
     ).then((response) => {
       console.log(response);
-      const siteScript = {
-        selectedSiteDesignID: response.Id,
-        siteDesignTitle: response.Title,
-        siteDesignDescription: response.Description,
-        selectedSiteScripts: response.SiteScriptIds,
-        siteDesignWebTemplate: response.WebTemplate,
-        siteDesignPreviewImageUrl: response.PreviewImageUrl,
-        siteDesignPreviewImageAltText: response.PreviewImageAltText
-      };
       this.setState({
         selectedSiteDesignID: response.Id,
         siteDesignTitle: response.Title,
@@ -313,7 +307,6 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
 
     const { loading, siteScriptResults, siteDesignResults, selectedSiteScripts } = this.state;
 
-
     const options = {
       selectOnLineNumbers: true
     };
@@ -338,10 +331,9 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     return (
       <div className={styles.spSiteDesigner} >
 
-        <button onClick={() => this._handleGetSiteScriptClick()}>Get Site Scripts</button>
+        {/* <button onClick={() => this._handleGetSiteScriptClick()}>Get Site Scripts</button>
         <button onClick={() => this._handleGetSiteDesignClick()}>Get Site Designs</button>
-        <button onClick={() => this._handleResetClick()}>Reset</button>
-
+        <button onClick={() => this._handleResetClick()}>Reset</button> */}
 
         <div>
           <h2>Site Script</h2>
@@ -350,10 +342,10 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
             <div><div>JSON</div>
 
               <MonacoEditor
-                width="600"
+                width="100%"
                 height="300"
                 language="json"
-                theme="vs-light"
+                theme="vs-dark"
                 value={this.state.editingSelectedSiteScriptContent}
                 options={options}
                 onChange={this._handleEditorChange}
@@ -412,14 +404,6 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
             )}
           </ul>
         </div>
-
-        {/* {siteDesignsWithSiteScripts &&
-          <ul>
-            {siteDesignsWithSiteScripts.map(siteDesign =>
-              <li>{siteDesign.Title}</li>
-            )}
-          </ul>
-        } */}
 
         <div>
           <h2>Available Site Scripts</h2>
