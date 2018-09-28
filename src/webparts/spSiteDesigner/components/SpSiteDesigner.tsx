@@ -7,6 +7,7 @@ import { SPHttpClient, ISPHttpClientOptions, SPHttpClientConfiguration, SPHttpCl
 import DualListBox from 'react-dual-listbox';
 import 'react-dual-listbox/lib/react-dual-listbox.css';
 
+import SiteScriptForm from './SiteScriptForm';
 export interface ISpSiteDesignerState {
   siteScriptResults?: any;
   siteDesignResults?: any;
@@ -19,6 +20,10 @@ export interface ISpSiteDesignerState {
   siteDesignPreviewImageUrl?: string;
   siteDesignPreviewImageAltText?: string;
   selectedSiteScripts?: any;
+  selectedSiteScriptID?: any;
+  editingSelectedSiteScriptTitle?: string;
+  editingSelectedSiteScriptContent?: string;
+  loading?: boolean;
 }
 
 export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps, ISpSiteDesignerState> {
@@ -28,9 +33,13 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       siteScriptData: null,
       siteScriptResults: null,
       siteScriptTitle: null,
-      selectedSiteScripts: []
+      selectedSiteScripts: [],
+      loading: true,
+      editingSelectedSiteScriptTitle: "",
+      editingSelectedSiteScriptContent: ""
     };
     this._handleInputChange = this._handleInputChange.bind(this);
+    this._handleCreateSiteScriptClick = this._handleCreateSiteScriptClick.bind(this);
   }
 
   public componentDidMount() {
@@ -38,24 +47,35 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
   }
 
   public _loadData() {
-    this._getSiteScripts();
-    this._getSiteDesigns();
+    this.setState({
+      loading: true
+    });
+    Promise.all([this._getSiteScripts(), this._getSiteDesigns()])
+      .then((response) => {
+        const [siteScriptResults, siteDesignResults] = response;
+        this.setState({
+          loading: false,
+          siteScriptResults: siteScriptResults.value,
+          siteDesignResults: siteDesignResults.value
+        });
+      });
   }
 
   public _reset() {
-    // this.setState({
-    //   selectedSiteDesignID: undefined
-    // });
+    this.setState({
+      selectedSiteDesignID: null,
+      selectedSiteScriptID: null
+    });
   }
 
   public baseUrl: string = '/';
 
-  private _getEffectiveUrl(relativeUrl: string): string {
+  private _getUrl(relativeUrl: string): string {
     return (this.baseUrl + '//' + relativeUrl).replace(/\/{2,}/, '/');
   }
 
   private _restRequest(url: string, params: any = null): Promise<any> {
-    const restUrl = this._getEffectiveUrl(url);
+    const restUrl = this._getUrl(url);
     const options: ISPHttpClientOptions = {
       body: JSON.stringify(params),
       headers: {
@@ -73,20 +93,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     });
   }
 
-  private site_script: string =
-    `{
-    "$schema": "schema.json",
-    "actions": [
-      {
-        "verb": "applyTheme",
-        "themeName": "Contoso Theme"
-      }
-    ],
-    "bindata": {},
-    "version": 1
-  }`;
-
-  private _createSiteScript(siteScriptTitle: string, siteScriptData: any): any {
+  private _saveSiteScript(siteScriptTitle: string, siteScriptData: string): any {
     siteScriptData = JSON.parse(siteScriptData);
     return this._restRequest(
       `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.CreateSiteScript(Title=@title)?@title='${siteScriptTitle}'`,
@@ -94,14 +101,10 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     );
   }
 
-  private _getSiteScripts(): any {
+  private _getSiteScripts(): Promise<any> {
     return this._restRequest(
       `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteScripts`
-    ).then((response) => {
-      this.setState({
-        siteScriptResults: response.value
-      });
-    });
+    ).then((response) => response);
   }
 
   private _getSiteScriptMetadata(id: string): any {
@@ -109,7 +112,11 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteScriptMetadata`,
       id
     ).then((response) => {
-      console.log(response);
+      this.setState({
+        selectedSiteScriptID: response.Id,
+        editingSelectedSiteScriptTitle: response.Title,
+        editingSelectedSiteScriptContent: response.Content,
+      });
     });
   }
 
@@ -117,12 +124,10 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     return this._restRequest(
       `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.DeleteSiteScript`,
       id
-    ).then((response) => {
-      console.log(response);
-    });
+    ).then((response) => response);
   }
 
-  private _createSiteDesign(): any {
+  private _saveSiteDesign(): any {
     if (this.state.selectedSiteDesignID) {
       return this._restRequest("/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.UpdateSiteDesign", {
         updateInfo: {
@@ -167,11 +172,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
   private _getSiteDesigns(): any {
     return this._restRequest(
       `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteDesigns`
-    ).then((response) => {
-      this.setState({
-        siteDesignResults: response.value
-      });
-    });
+    ).then((response) => response);
   }
 
   private _getSiteDesignMetadata(id: string): any {
@@ -180,6 +181,15 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       id
     ).then((response) => {
       console.log(response);
+      const siteScript = {
+        selectedSiteDesignID: response.Id,
+        siteDesignTitle: response.Title,
+        siteDesignDescription: response.Description,
+        selectedSiteScripts: response.SiteScriptIds,
+        siteDesignWebTemplate: response.WebTemplate,
+        siteDesignPreviewImageUrl: response.PreviewImageUrl,
+        siteDesignPreviewImageAltText: response.PreviewImageAltText
+      };
       this.setState({
         selectedSiteDesignID: response.Id,
         siteDesignTitle: response.Title,
@@ -191,27 +201,25 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       });
     });
   }
-  // private _getSiteDesignMetadata(): any {
-  //   this.RestRequest("/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteDesignMetadata",
-  //     { id: "614f9b28-3e85-4ec9-a961-5971ea086cca" });
-  // }
 
   private _handleCreateSiteScriptClick(): any {
-    this._createSiteScript(this.state.siteScriptTitle, this.state.siteScriptData);
+    this._saveSiteScript(this.state.editingSelectedSiteScriptTitle, this.state.editingSelectedSiteScriptContent);
   }
 
   private _handleCreateSiteDesignClick(): any {
-    this._createSiteDesign();
+    this._saveSiteDesign();
   }
 
   private _handleGetSiteScriptClick(): any {
-    this._reset();
     this._getSiteScripts();
   }
 
   private _handleGetSiteDesignClick(): any {
-    this._reset();
     this._getSiteDesigns();
+  }
+
+  private _handleResetClick(): any {
+    this._reset();
   }
 
   private _handleInputChange(event: any): any {
@@ -250,7 +258,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
   private _handleDeleteSiteDesign(id: string): any {
     const siteDesign: any = {
       id: id
-    }
+    };
     let shouldDelete: boolean = confirm("Are you sure you want to delete this Design?");
     if (shouldDelete) {
       this._deleteSiteDesign(siteDesign);
@@ -278,7 +286,8 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
   }
 
   public render(): React.ReactElement<ISpSiteDesignerProps> {
-    const { siteScriptResults, siteDesignResults, selectedSiteScripts } = this.state;
+
+    const { loading, siteScriptResults, siteDesignResults, selectedSiteScripts } = this.state;
 
     let siteDesignsWithSiteScripts;
     if (siteScriptResults && siteScriptResults) {
@@ -295,33 +304,39 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       });
     }
 
+    if (loading) return <div></div>;
+
     return (
       <div className={styles.spSiteDesigner} >
 
         <button onClick={() => this._handleGetSiteScriptClick()}>Get Site Scripts</button>
         <button onClick={() => this._handleGetSiteDesignClick()}>Get Site Designs</button>
+        <button onClick={() => this._handleResetClick()}>Reset</button>
+
 
         <div>
+          <h2>Site Script</h2>
           <form>
-            <div><input id="siteScriptTitle" name="siteScriptTitle" value={this.state.siteScriptTitle} onChange={this._handleInputChange}></input></div>
-            <div><textarea id="siteScriptData" name="siteScriptData" value={this.state.siteScriptData} onChange={this._handleInputChange}></textarea></div>
+            <div><div>Title</div><input id="siteScriptTitle" name="editingSelectedSiteScriptTitle" value={this.state.editingSelectedSiteScriptTitle} onChange={this._handleInputChange}></input></div>
+            <div><div>JSON</div><textarea style={{width:'400px'}} id="siteScriptData" name="editingSelectedSiteScriptContent" value={this.state.editingSelectedSiteScriptContent} onChange={this._handleInputChange}></textarea></div>
           </form>
-          <button onClick={() => this._handleCreateSiteScriptClick()}>Create Site Script</button>
+          <button onClick={this._handleCreateSiteScriptClick}>Save Site Script</button>
         </div>
 
-
+        {/* <SiteScriptForm handleCreateSiteScriptClick={this._handleCreateSiteScriptClick} initialState={this.state.editingSelectedSiteScript} /> */}
 
         <div>
+          <h2>Site Design</h2>
           <form>
-            <div><input name="siteDesignTitle" value={this.state.siteDesignTitle} onChange={this._handleInputChange} /></div>
-            <div><input name="siteDesignDescription" value={this.state.siteDesignDescription} onChange={this._handleInputChange} /></div>
-            <div><input name="siteDesignWebTemplate" value={this.state.siteDesignWebTemplate} onChange={this._handleInputChange} /></div>
-            <div><input name="siteDesignPreviewImageUrl" value={this.state.siteDesignPreviewImageUrl} onChange={this._handleInputChange} /></div>
-            <div><input name="siteDesignPreviewImageAltText" value={this.state.siteDesignPreviewImageAltText} onChange={this._handleInputChange} /></div>
+            <div><div>Title</div><input name="siteDesignTitle" value={this.state.siteDesignTitle} onChange={this._handleInputChange} /></div>
+            <div><div>Description</div><input name="siteDesignDescription" value={this.state.siteDesignDescription} onChange={this._handleInputChange} /></div>
+            <div><div>Web Template</div><input name="siteDesignWebTemplate" value={this.state.siteDesignWebTemplate} onChange={this._handleInputChange} /></div>
+            <div><div>Preview Image URL</div><input name="siteDesignPreviewImageUrl" value={this.state.siteDesignPreviewImageUrl} onChange={this._handleInputChange} /></div>
+            <div><div>Preview Image Alt Text</div><input name="siteDesignPreviewImageAltText" value={this.state.siteDesignPreviewImageAltText} onChange={this._handleInputChange} /></div>
 
-            <div style={{display: 'flex',justifyContent: 'space-between'}}>
-              <div>Available Site Scripts</div>
-              <div>Added to Site Design</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div><h4>Available Site Scripts</h4></div>
+              <div><h4>Added to Site Design</h4></div>
             </div>
             {siteScriptOptions && <DualListBox
               availableLabel="Available Site Scripts"
@@ -334,17 +349,25 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
               }}
             />}
           </form>
-          <button onClick={() => this._handleCreateSiteDesignClick()}>Create Site Design</button>
+          <button onClick={() => this._handleCreateSiteDesignClick()}>Save Site Design</button>
         </div>
 
-        <ul>
-          {siteDesignResults && siteDesignResults.map(siteDesign =>
-            <li>{siteDesign.Title}
-              <button onClick={() => this._handleSiteDesignEdit(siteDesign.Id)}>Edit</button>
-              <button onClick={() => this._handleDeleteSiteDesign(siteDesign.Id)}>Delete</button>
-            </li>
-          )}
-        </ul>
+        <div>
+          <h2>Available Site Designs</h2>
+          <ul>
+            {siteDesignResults && siteDesignResults.map(siteDesign =>
+              <li>
+                <div>
+                  {siteDesign.Title}
+                </div>
+                <div>
+                  <button onClick={() => this._handleSiteDesignEdit(siteDesign.Id)}>Edit</button>
+                  <button onClick={() => this._handleDeleteSiteDesign(siteDesign.Id)}>Delete</button>
+                </div>
+              </li>
+            )}
+          </ul>
+        </div>
 
         {/* {siteDesignsWithSiteScripts &&
           <ul>
@@ -354,15 +377,22 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
           </ul>
         } */}
 
-        <ul>
-          {siteScriptResults && siteScriptResults.map(siteScript =>
-            <li>{siteScript.Title}
-              <button onClick={() => this._handleSiteScriptEdit(siteScript.Id)}>Edit</button>
-              <button onClick={() => this._handleDeleteSiteScript(siteScript.Id)}>Delete</button>
-            </li>
-          )}
-        </ul>
-
+        <div>
+          <h2>Available Site Scripts</h2>
+          <ul>
+            {siteScriptResults && siteScriptResults.map(siteScript =>
+              <li>
+                <div>
+                  {siteScript.Title}
+                </div>
+                <div>
+                  <button onClick={() => this._handleSiteScriptEdit(siteScript.Id)}>Edit</button>
+                  <button onClick={() => this._handleDeleteSiteScript(siteScript.Id)}>Delete</button>
+                </div>
+              </li>
+            )}
+          </ul>
+        </div>
       </div>
     );
   }
