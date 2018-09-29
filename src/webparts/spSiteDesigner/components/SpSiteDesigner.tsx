@@ -4,7 +4,8 @@ import { ISpSiteDesignerProps } from './ISpSiteDesignerProps';
 import { escape } from '@microsoft/sp-lodash-subset';
 import { SPHttpClient, ISPHttpClientOptions, SPHttpClientConfiguration, SPHttpClientResponse } from '@microsoft/sp-http';
 
-import { TextField, MaskedTextField } from 'office-ui-fabric-react/lib/TextField';
+import { TextField } from 'office-ui-fabric-react/lib/TextField';
+import { DefaultButton, IButtonProps } from 'office-ui-fabric-react/lib/Button';
 
 import MonacoEditor from 'react-monaco-editor';
 
@@ -54,8 +55,9 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       }
     };
     this._handleInputChange = this._handleInputChange.bind(this);
-    this._handleCreateSiteScriptClick = this._handleCreateSiteScriptClick.bind(this);
     this._handleEditorChange = this._handleEditorChange.bind(this);
+    this._handleSiteScriptFormSubmit = this._handleSiteScriptFormSubmit.bind(this);
+    this._handleSiteDesignFormSubmit = this._handleSiteDesignFormSubmit.bind(this);
   }
 
   public componentDidMount() {
@@ -109,8 +111,8 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     });
   }
 
-  private _saveSiteScript(siteScriptTitle: string, siteScriptData: string): any {
-    siteScriptData = JSON.parse(siteScriptData);
+  private _saveSiteScript(): any {
+    const siteScriptData = JSON.parse(this.state.siteScriptForm.content);
     if (this.state.selectedSiteScriptID) {
       // Update Site Script
       return this._restRequest(
@@ -125,7 +127,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     }
     // Create Site Script
     return this._restRequest(
-      `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.CreateSiteScript(Title=@title)?@title='${siteScriptTitle}'`,
+      `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.CreateSiteScript(Title=@title)?@title='${this.state.siteScriptForm.title}'`,
       siteScriptData
     );
   }
@@ -228,13 +230,6 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     });
   }
 
-  private _handleCreateSiteScriptClick(): any {
-    this._saveSiteScript(this.state.siteScriptForm.title, this.state.siteScriptForm.content);
-  }
-
-  private _handleCreateSiteDesignClick(): any {
-    this._saveSiteDesign();
-  }
 
   private _handleGetSiteScriptClick(): any {
     this._getSiteScripts();
@@ -323,6 +318,11 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     }));
   }
 
+  public _handleSiteScriptFormSubmit(event) {
+    event.preventDefault();
+    this._saveSiteScript();
+  }
+
   public _handleSiteDesignFormSubmit(event) {
     event.preventDefault();
     this._saveSiteDesign();
@@ -357,7 +357,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       <div className={styles.spSiteDesigner} >
         <div>
           <h2>Site Script</h2>
-          <form>
+          <form onSubmit={this._handleSiteScriptFormSubmit}>
             <TextField label="Title" value={this.state.siteScriptForm.title} onChanged={this._handleInputChange('siteScriptForm', 'title')} />
             <div><div>JSON</div>
 
@@ -373,11 +373,9 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
               />
 
             </div>
+            <DefaultButton text="Save" type="Submit" primary={true} />
           </form>
-          <button onClick={this._handleCreateSiteScriptClick}>Save Site Script</button>
         </div>
-
-        {/* <SiteScriptForm handleCreateSiteScriptClick={this._handleCreateSiteScriptClick} initialState={this.state.editingSelectedSiteScript} /> */}
 
         <div>
           <h2>Site Design</h2>
@@ -407,9 +405,8 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
                 }));
               }}
             />}
-            <input type="Submit" value="Save" />
+            <DefaultButton text="Save" type="Submit" primary={true} />
           </form>
-          {/* <button onClick={() => this._handleCreateSiteDesignClick()}>Save Site Design</button> */}
         </div>
 
         <div>
