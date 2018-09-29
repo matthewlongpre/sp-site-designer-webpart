@@ -248,15 +248,6 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     this._reset();
   }
 
-  // private _handleInputChange(event: any): any {
-  //   const target = event.target;
-  //   const value = target.value;
-  //   const name = target.name;
-  //   this.setState({
-  //     [name]: value
-  //   });
-  // }
-
   public _handleInputChange = (form, name) => value => {
     this.setState(state => ({
       [form]: {
@@ -333,8 +324,8 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
   }
 
   public _handleSiteDesignFormSubmit(event) {
-    console.log(event);
     event.preventDefault();
+    this._saveSiteDesign();
   }
 
   public render(): React.ReactElement<ISpSiteDesignerProps> {
@@ -390,7 +381,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
 
         <div>
           <h2>Site Design</h2>
-          <form>
+          <form onSubmit={this._handleSiteDesignFormSubmit}>
             <TextField label="Title" value={this.state.siteDesignForm.title} onChanged={this._handleInputChange('siteDesignForm', 'title')} />
             <TextField label="Description" value={this.state.siteDesignForm.description} onChanged={this._handleInputChange('siteDesignForm', 'description')} />
             <TextField label="Web Template" value={this.state.siteDesignForm.webTemplate} onChanged={this._handleInputChange('siteDesignForm', 'webTemplate')} />
@@ -410,7 +401,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
               onChange={(selectedSiteScripts) => {
                 this.setState(state => ({
                   siteDesignForm: {
-                    ...state,
+                    ...state.siteDesignForm,
                     selectedSiteScripts
                   }
                 }));
