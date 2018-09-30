@@ -19,8 +19,6 @@ import SiteScriptForm from './SiteScriptForm';
 export interface ISpSiteDesignerState {
   siteScriptResults?: any;
   siteDesignResults?: any;
-  siteScriptData?: string;
-  siteScriptTitle?: string;
   siteDesignTitle?: string;
   selectedSiteDesignID?: string;
   siteDesignDescription?: string;
@@ -35,15 +33,14 @@ export interface ISpSiteDesignerState {
     description?: string;
   };
   siteDesignForm?: any;
+  siteScriptActionCount: number;
 }
 
 export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps, ISpSiteDesignerState> {
   constructor(props: any) {
     super(props);
     this.state = {
-      siteScriptData: null,
       siteScriptResults: null,
-      siteScriptTitle: null,
       loading: true,
       siteScriptForm: {
         title: "",
@@ -57,7 +54,8 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
         previewImageUrl: "",
         previewImageAltText: "",
         selectedSiteScripts: []
-      }
+      },
+      siteScriptActionCount: 0
     };
     this._handleInputChange = this._handleInputChange.bind(this);
     this._handleEditorChange = this._handleEditorChange.bind(this);
@@ -226,7 +224,6 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteDesignMetadata`,
       id
     ).then((response) => {
-      console.log(response);
       this.setState({
         selectedSiteDesignID: response.Id,
         siteDesignForm: {
@@ -376,6 +373,27 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     });
   }
 
+  public _countSiteScriptActions() {
+    // site script IDs to check
+    const siteScripts = this.state.siteDesignForm.selectedSiteScripts;
+    let actionCount: number = 0;
+    for (let i: number = 0; i < siteScripts.length; i++) {
+      const siteScript: any = {
+        id: siteScripts[i]
+      };
+      this._restRequest(`/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteScriptMetadata`, siteScript)
+      .then((response) => {
+        const obj = JSON.parse(response.Content);
+        actionCount += obj.actions.length;
+        console.log(obj.actions.length);
+      });
+    }
+    console.log(actionCount);
+    this.setState({
+      siteScriptActionCount: actionCount
+    });
+  }
+
   public render(): React.ReactElement<ISpSiteDesignerProps> {
 
     const { loading, siteScriptResults, siteDesignResults, siteDesignForm, selectedSiteScriptID, selectedSiteDesignID } = this.state;
@@ -472,6 +490,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
                 <div className={styles.main}>
                   <div>
                     <h2 className={styles.formTitle}>{(selectedSiteDesignID ? "Edit" : "Create")} Site Design</h2>
+                    <button onClick={() => this._countSiteScriptActions()}>Count Actions</button>
                     <form onSubmit={this._handleSiteDesignFormSubmit}>
                       <TextField label="Title" value={this.state.siteDesignForm.title} onChanged={this._handleInputChange('siteDesignForm', 'title')} />
                       <TextField label="Description" value={this.state.siteDesignForm.description} onChanged={this._handleInputChange('siteDesignForm', 'description')} />
