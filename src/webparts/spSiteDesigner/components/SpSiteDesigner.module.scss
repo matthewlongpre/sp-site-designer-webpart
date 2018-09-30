@@ -2,16 +2,16 @@
 
 .spSiteDesigner {
   .container {
-    max-width: 700px;
+    // max-width: 700px;
     margin: 0px auto;
-    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 25px 50px 0 rgba(0, 0, 0, 0.1);
+    // box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 25px 50px 0 rgba(0, 0, 0, 0.1);
   }
 
   .row {
     @include ms-Grid-row;
-    @include ms-fontColor-white;
-    background-color: $ms-color-themeDark;
-    padding: 20px;
+    // @include ms-fontColor-white;
+    // background-color: $ms-color-themeDark;
+    padding: 10px;
   }
 
   .column {
@@ -20,6 +20,42 @@
     @include ms-xl8;
     @include ms-xlPush2;
     @include ms-lgPush1;
+  }
+
+  .sidebar {
+    @include ms-Grid-col;
+    @include ms-lg4;
+  }
+
+  .main {
+    @include ms-Grid-col;
+    @include ms-lg8;
+  }
+
+  .sidebarList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    li {
+      padding: 3px 10px;
+      &.selected {
+        background: #f4f4f4;
+      }
+      &:hover {
+        background: #f9f9f9;
+        cursor: pointer;
+      }
+    }
+    .listLabel {
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .mt3 {
+    margin-top: 1rem;
   }
 
   .title {
