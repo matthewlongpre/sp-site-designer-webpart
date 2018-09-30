@@ -129,13 +129,17 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
             Description: this.state.siteScriptForm.description
           }
         }
-      );
+      ).then(() => {
+        this._loadData();
+      });
     }
     // Create Site Script
     return this._restRequest(
       `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.CreateSiteScript(Title=@title)?@title='${this.state.siteScriptForm.title}'`,
       siteScriptData
-    );
+    ).then(() => {
+      this._loadData();
+    });
   }
 
   private _getSiteScripts(): Promise<any> {
@@ -145,6 +149,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
   }
 
   private _getSiteScriptMetadata(id: string): any {
+    this._clearSiteScriptForm();
     return this._restRequest(
       `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteScriptMetadata`,
       id
@@ -164,7 +169,9 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     return this._restRequest(
       `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.DeleteSiteScript`,
       id
-    ).then((response) => response);
+    ).then(() => {
+      this._loadData();
+    });
   }
 
   private _saveSiteDesign(): any {
@@ -181,7 +188,6 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
           PreviewImageAltText: this.state.siteDesignForm.previewImageAltText
         }
       }).then((response) => {
-        console.log(response);
         this._loadData();
       });
     }
@@ -196,7 +202,6 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
         PreviewImageAltText: this.state.siteDesignForm.previewImageAltText
       }
     }).then((response) => {
-      console.log(response);
       this._loadData();
     });
   }
@@ -206,7 +211,6 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.DeleteSiteDesign`,
       id
     ).then((response) => {
-      console.log(response);
       this._loadData();
     });
   }
@@ -335,9 +339,46 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     this._saveSiteDesign();
   }
 
+  public _handleNewSiteScriptClick() {
+    this.setState({
+      selectedSiteScriptID: null
+    });
+    this._clearSiteScriptForm();
+  }
+
+  public _handleNewSiteDesignClick() {
+    this.setState({
+      selectedSiteDesignID: null
+    });
+    this._clearSiteDesignForm();
+  }
+
+  public _clearSiteScriptForm() {
+    this.setState({
+      siteScriptForm: {
+        title: "",
+        content: "",
+        description: ""
+      }
+    });
+  }
+
+  public _clearSiteDesignForm() {
+    this.setState({
+      siteDesignForm: {
+        title: "",
+        description: "",
+        webTemplate: "",
+        previewImageUrl: "",
+        previewImageAltText: "",
+        selectedSiteScripts: []
+      }
+    });
+  }
+
   public render(): React.ReactElement<ISpSiteDesignerProps> {
 
-    const { loading, siteScriptResults, siteDesignResults, siteDesignForm, selectedSiteScriptID } = this.state;
+    const { loading, siteScriptResults, siteDesignResults, siteDesignForm, selectedSiteScriptID, selectedSiteDesignID } = this.state;
 
     const options = {
       selectOnLineNumbers: true
@@ -358,30 +399,24 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       });
     }
 
-    if (loading) return <div></div>;
-
     return (
       <div className={styles.spSiteDesigner}>
-
         <Pivot>
-          <PivotItem
-            headerText="Site Scripts"
-          >
+          <PivotItem headerText="Site Scripts">
             <div className={styles.container}>
+              <div className={styles.row}>
+                {selectedSiteScriptID && <DefaultButton text="Create a New Site Script" primary={true} onClick={() => this._handleNewSiteScriptClick()} />}
+              </div>
               <div className={styles.row}>
                 <div className={styles.sidebar}>
                   <div>
-                    <h2 className="ms-fontWeight-light ms-fontSize-m">Your Site Scripts</h2>
+                    <h2 className={styles.sidebarTitle}>Your Site Scripts</h2>
                     <ul className={styles.sidebarList}>
                       {siteScriptResults && siteScriptResults.map(siteScript =>
-                        <li key={siteScript.Id} onClick={() => this._handleSiteScriptEdit(siteScript.Id)} className={(this.state.selectedSiteScriptID === siteScript.Id && styles.selected)}>
+                        <li key={siteScript.Id} title={siteScript.Title} onClick={() => this._handleSiteScriptEdit(siteScript.Id)} className={(this.state.selectedSiteScriptID === siteScript.Id && styles.selected)}>
                           <div className={styles.listLabel}>
                             {siteScript.Title}
                           </div>
-                          {/* <div>
-                            <button onClick={() => this._handleSiteScriptEdit(siteScript.Id)}>Edit</button>
-                            <button onClick={() => this._handleDeleteSiteScript(siteScript.Id)}>Delete</button>
-                          </div> */}
                         </li>
                       )}
                     </ul>
@@ -389,12 +424,12 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
                 </div>
                 <div className={styles.main}>
                   <div>
-                    <h2 className="ms-font-xl">Site Script</h2>
+                    <h2 className={styles.formTitle}>{(selectedSiteScriptID ? "Edit" : "Create")} Site Script</h2>
                     <form onSubmit={this._handleSiteScriptFormSubmit}>
                       <TextField label="Title" value={this.state.siteScriptForm.title} onChanged={this._handleInputChange('siteScriptForm', 'title')} />
                       {selectedSiteScriptID && <TextField label="Description" value={this.state.siteScriptForm.description} onChanged={this._handleInputChange('siteScriptForm', 'description')} />}
                       <div>
-                        <div className="ms-Label root-135">JSON</div>
+                        <div className={styles.p5}>JSON</div>
                         <MonacoEditor
                           width="100%"
                           height="300"
@@ -406,61 +441,68 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
                           editorDidMount={this.editorDidMount}
                         />
                       </div>
-                      <DefaultButton text="Save" type="Submit" primary={true} className={styles.mt3} />
+                      <DefaultButton text="Save" type="Submit" primary={true} className={`${styles.mt3} ${styles.mr2}`} />
+                      {selectedSiteScriptID && <DefaultButton text="Delete" onClick={() => this._handleDeleteSiteScript(this.state.selectedSiteScriptID)} className={styles.mt3} />}
                     </form>
                   </div>
                 </div>
               </div>
             </div>
-
           </PivotItem>
           <PivotItem headerText="Site Designs">
-            <div>
-              <h2 className="ms-font-xl">Site Design</h2>
-              <form onSubmit={this._handleSiteDesignFormSubmit}>
-                <TextField label="Title" value={this.state.siteDesignForm.title} onChanged={this._handleInputChange('siteDesignForm', 'title')} />
-                <TextField label="Description" value={this.state.siteDesignForm.description} onChanged={this._handleInputChange('siteDesignForm', 'description')} />
-                <TextField label="Web Template" value={this.state.siteDesignForm.webTemplate} onChanged={this._handleInputChange('siteDesignForm', 'webTemplate')} />
-                <TextField label="Preview Image URL" value={this.state.siteDesignForm.previewImageUrl} onChanged={this._handleInputChange('siteDesignForm', 'previewImageUrl')} />
-                <TextField label="Preview Image Alt Text" value={this.state.siteDesignForm.previewImageAltText} onChanged={this._handleInputChange('siteDesignForm', 'previewImageAltText')} />
-
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <div><h4>Available Site Scripts</h4></div>
-                  <div><h4>Added to Site Design</h4></div>
+            <div className={styles.container}>
+              <div className={styles.row}>
+                {selectedSiteDesignID && <DefaultButton text="Create a New Site Design" primary={true} onClick={() => this._handleNewSiteDesignClick()} />}
+              </div>
+              <div className={styles.row}>
+                <div className={styles.sidebar}>
+                  <div>
+                    <h2 className={styles.sidebarTitle}>Your Site Designs</h2>
+                    <ul className={styles.sidebarList}>
+                      {siteDesignResults && siteDesignResults.map(siteDesign =>
+                        <li key={siteDesign.Id} title={siteDesign.Title} onClick={() => this._handleSiteDesignEdit(siteDesign.Id)} className={(this.state.selectedSiteDesignID === siteDesign.Id && styles.selected)}>
+                          <div className={styles.listLabel}>
+                            {siteDesign.Title}
+                          </div>
+                        </li>
+                      )}
+                    </ul>
+                  </div>
                 </div>
-                {siteScriptOptions && <DualListBox
-                  availableLabel="Available Site Scripts"
-                  selectedLabel="Added to Site Design"
-                  simpleValue={true}
-                  options={siteScriptOptions}
-                  selected={siteDesignForm.selectedSiteScripts}
-                  onChange={(selectedSiteScripts) => {
-                    this.setState(state => ({
-                      siteDesignForm: {
-                        ...state.siteDesignForm,
-                        selectedSiteScripts
-                      }
-                    }));
-                  }}
-                />}
-                <DefaultButton text="Save" type="Submit" primary={true} />
-              </form>
-            </div>
-            <div>
-              <h2 className="ms-font-xl">Available Site Designs</h2>
-              <ul>
-                {siteDesignResults && siteDesignResults.map(siteDesign =>
-                  <li>
-                    <div>
-                      {siteDesign.Title}
-                    </div>
-                    <div>
-                      <button onClick={() => this._handleSiteDesignEdit(siteDesign.Id)}>Edit</button>
-                      <button onClick={() => this._handleDeleteSiteDesign(siteDesign.Id)}>Delete</button>
-                    </div>
-                  </li>
-                )}
-              </ul>
+                <div className={styles.main}>
+                  <div>
+                    <h2 className={styles.formTitle}>{(selectedSiteDesignID ? "Edit" : "Create")} Site Design</h2>
+                    <form onSubmit={this._handleSiteDesignFormSubmit}>
+                      <TextField label="Title" value={this.state.siteDesignForm.title} onChanged={this._handleInputChange('siteDesignForm', 'title')} />
+                      <TextField label="Description" value={this.state.siteDesignForm.description} onChanged={this._handleInputChange('siteDesignForm', 'description')} />
+                      <TextField label="Web Template" value={this.state.siteDesignForm.webTemplate} onChanged={this._handleInputChange('siteDesignForm', 'webTemplate')} />
+                      <TextField label="Preview Image URL" value={this.state.siteDesignForm.previewImageUrl} onChanged={this._handleInputChange('siteDesignForm', 'previewImageUrl')} />
+                      <TextField label="Preview Image Alt Text" value={this.state.siteDesignForm.previewImageAltText} onChanged={this._handleInputChange('siteDesignForm', 'previewImageAltText')} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div><h4>Available Site Scripts</h4></div>
+                        <div><h4>Added to Site Design</h4></div>
+                      </div>
+                      {siteScriptOptions && <DualListBox
+                        availableLabel="Available Site Scripts"
+                        selectedLabel="Added to Site Design"
+                        simpleValue={true}
+                        options={siteScriptOptions}
+                        selected={siteDesignForm.selectedSiteScripts}
+                        onChange={(selectedSiteScripts) => {
+                          this.setState(state => ({
+                            siteDesignForm: {
+                              ...state.siteDesignForm,
+                              selectedSiteScripts
+                            }
+                          }));
+                        }}
+                      />}
+                      <DefaultButton text="Save" type="Submit" primary={true} className={`${styles.mt3} ${styles.mr2}`} />
+                      {selectedSiteDesignID && <DefaultButton text="Delete" onClick={() => this._handleDeleteSiteDesign(this.state.selectedSiteDesignID)} className={styles.mt3} />}
+                    </form>
+                  </div>
+                </div>
+              </div>
             </div>
           </PivotItem>
         </Pivot>

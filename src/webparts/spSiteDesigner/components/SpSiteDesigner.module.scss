@@ -32,6 +32,16 @@
     @include ms-lg8;
   }
 
+  .formTitle {
+    margin: 6px 0;
+    @include ms-font-xl;
+  }
+
+  .sidebarTitle {
+    @include ms-fontWeight-light;
+    @include ms-fontSize-m;
+  }
+
   .sidebarList {
     list-style: none;
     margin: 0;
@@ -56,6 +66,15 @@
 
   .mt3 {
     margin-top: 1rem;
+  }
+
+  .mr2 {
+    margin-right: 0.5rem;
+  }
+
+  .p5 {
+    padding-top: 5px;
+    padding-bottom: 5px;
   }
 
   .title {
