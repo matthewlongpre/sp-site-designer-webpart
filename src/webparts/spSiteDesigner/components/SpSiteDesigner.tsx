@@ -55,7 +55,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
         previewImageAltText: "",
         selectedSiteScripts: []
       },
-      siteScriptActionCount: 0
+      siteScriptActionCount: null
     };
     this._handleInputChange = this._handleInputChange.bind(this);
     this._handleEditorChange = this._handleEditorChange.bind(this);
@@ -376,27 +376,32 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
   public _countSiteScriptActions() {
     // site script IDs to check
     const siteScripts = this.state.siteDesignForm.selectedSiteScripts;
-    let actionCount: number = 0;
+    let requestList = [];
+
     for (let i: number = 0; i < siteScripts.length; i++) {
       const siteScript: any = {
         id: siteScripts[i]
       };
-      this._restRequest(`/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteScriptMetadata`, siteScript)
-      .then((response) => {
-        const obj = JSON.parse(response.Content);
-        actionCount += obj.actions.length;
-        console.log(obj.actions.length);
-      });
+      requestList.push(this._restRequest(`/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteScriptMetadata`, siteScript));
     }
-    console.log(actionCount);
-    this.setState({
-      siteScriptActionCount: actionCount
+
+    Promise.all(requestList)
+    .then((response) => {
+      let actionCount: number = 0;
+      for (let i: number = 0; i < response.length; i++) {
+        const siteScript = response[i];
+        const siteScriptObj = JSON.parse(siteScript.Content);
+        actionCount += siteScriptObj.actions.length;
+      }
+      this.setState({
+        siteScriptActionCount: actionCount
+      });
     });
   }
 
   public render(): React.ReactElement<ISpSiteDesignerProps> {
 
-    const { loading, siteScriptResults, siteDesignResults, siteDesignForm, selectedSiteScriptID, selectedSiteDesignID } = this.state;
+    const { loading, siteScriptResults, siteDesignResults, siteDesignForm, selectedSiteScriptID, selectedSiteDesignID, siteScriptActionCount } = this.state;
 
     const options = {
       selectOnLineNumbers: true
@@ -490,7 +495,9 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
                 <div className={styles.main}>
                   <div>
                     <h2 className={styles.formTitle}>{(selectedSiteDesignID ? "Edit" : "Create")} Site Design</h2>
-                    <button onClick={() => this._countSiteScriptActions()}>Count Actions</button>
+                    {selectedSiteDesignID && this._countSiteScriptActions()}
+                    {siteScriptActionCount}
+                    {/* <button onClick={() => this._countSiteScriptActions()}>Count Actions</button> */}
                     <form onSubmit={this._handleSiteDesignFormSubmit}>
                       <TextField label="Title" value={this.state.siteDesignForm.title} onChanged={this._handleInputChange('siteDesignForm', 'title')} />
                       <TextField label="Description" value={this.state.siteDesignForm.description} onChanged={this._handleInputChange('siteDesignForm', 'description')} />
