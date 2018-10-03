@@ -32,6 +32,33 @@
     @include ms-lg8;
   }
 
+  .actionCount {
+    background: #f3f3f3;
+    border-radius: 4px;
+    padding: 5px;
+    max-width: 60px;
+    text-align: center;
+    .actionCountLabel {
+      font-size: 80%;
+    }
+    .actionCountValue {
+      font-weight: bold;
+      margin-right: 5px;
+    }
+    .actionLimit {
+      margin-left: 5px;
+    }
+    &.green {
+      background: #adf37c;
+    }
+    &.yellow {
+      background: #adf37c;
+    }
+    &.red {
+      background: #ff6b6b;
+    }
+  }
+
   .formTitle {
     margin: 6px 0;
     @include ms-font-xl;

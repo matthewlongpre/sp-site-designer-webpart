@@ -16,6 +16,9 @@ import DualListBox from 'react-dual-listbox';
 import 'react-dual-listbox/lib/react-dual-listbox.css';
 
 import SiteScriptForm from './SiteScriptForm';
+
+const actionLimit: number = 30;
+
 export interface ISpSiteDesignerState {
   siteScriptResults?: any;
   siteDesignResults?: any;
@@ -386,17 +389,33 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     }
 
     Promise.all(requestList)
-    .then((response) => {
-      let actionCount: number = 0;
-      for (let i: number = 0; i < response.length; i++) {
-        const siteScript = response[i];
-        const siteScriptObj = JSON.parse(siteScript.Content);
-        actionCount += siteScriptObj.actions.length;
-      }
-      this.setState({
-        siteScriptActionCount: actionCount
+      .then((response) => {
+        let actionCount: number = 0;
+        for (let i: number = 0; i < response.length; i++) {
+          const siteScript = response[i];
+          const siteScriptObj = JSON.parse(siteScript.Content);
+          actionCount += siteScriptObj.actions.length;
+        }
+        this.setState({
+          siteScriptActionCount: actionCount
+        });
       });
-    });
+  }
+
+  public _actionCountFormat(siteScriptActionCount: number): string {
+    let actionCountFormat;
+    if (siteScriptActionCount) {
+      if (siteScriptActionCount <= 25) {
+        actionCountFormat = styles.green;
+      }
+      if (siteScriptActionCount >= 26 && siteScriptActionCount <= 28) {
+        actionCountFormat = styles.yellow;
+      }
+      if (siteScriptActionCount >= 29) {
+        actionCountFormat = styles.red;
+      }
+    }
+    return actionCountFormat;
   }
 
   public render(): React.ReactElement<ISpSiteDesignerProps> {
@@ -496,8 +515,10 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
                   <div>
                     <h2 className={styles.formTitle}>{(selectedSiteDesignID ? "Edit" : "Create")} Site Design</h2>
                     {selectedSiteDesignID && this._countSiteScriptActions()}
-                    {siteScriptActionCount}
-                    {/* <button onClick={() => this._countSiteScriptActions()}>Count Actions</button> */}
+                    <div className={`${styles.actionCount} ${this._actionCountFormat(siteScriptActionCount)}`}>
+                      <div className={styles.actionCountLabel}>Actions:</div>
+                      <span className={styles.actionCountValue}>{siteScriptActionCount}</span>/<span className={styles.actionLimit}>{actionLimit}</span>
+                    </div>
                     <form onSubmit={this._handleSiteDesignFormSubmit}>
                       <TextField label="Title" value={this.state.siteDesignForm.title} onChanged={this._handleInputChange('siteDesignForm', 'title')} />
                       <TextField label="Description" value={this.state.siteDesignForm.description} onChanged={this._handleInputChange('siteDesignForm', 'description')} />
