@@ -415,7 +415,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
 
   public render(): React.ReactElement<ISpSiteDesignerProps> {
 
-    const { loading, siteScriptResults, siteDesignResults, siteDesignForm, selectedSiteScriptID, selectedSiteDesignID, siteScriptActionCount } = this.state;
+    const { loading, siteScriptResults, siteDesignResults, siteDesignForm, siteScriptForm, selectedSiteScriptID, selectedSiteDesignID, siteScriptActionCount } = this.state;
 
     const options = {
       selectOnLineNumbers: true
@@ -468,8 +468,8 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
                   <div>
                     <h2 className={styles.formTitle}>{(selectedSiteScriptID ? "Edit" : "Create")} Site Script</h2>
                     <form onSubmit={this._handleSiteScriptFormSubmit}>
-                      <TextField label="Title" value={this.state.siteScriptForm.title} onChanged={this._handleInputChange('siteScriptForm', 'title')} />
-                      {selectedSiteScriptID && <TextField label="Description" value={this.state.siteScriptForm.description} onChanged={this._handleInputChange('siteScriptForm', 'description')} />}
+                      <TextField label="Title" value={siteScriptForm.title} onChanged={this._handleInputChange('siteScriptForm', 'title')} />
+                      {selectedSiteScriptID && <TextField label="Description" value={siteScriptForm.description} onChanged={this._handleInputChange('siteScriptForm', 'description')} />}
                       <div>
                         <div className={styles.p5}>JSON</div>
                         <MonacoEditor
@@ -477,7 +477,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
                           height="300"
                           language="json"
                           theme="vs-dark"
-                          value={this.state.siteScriptForm.content}
+                          value={siteScriptForm.content}
                           options={options}
                           onChange={this._handleEditorChange}
                           editorDidMount={this.editorDidMount}
@@ -528,11 +528,11 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
                       </div>
                     </div>
                     <form onSubmit={this._handleSiteDesignFormSubmit}>
-                      <TextField label="Title" value={this.state.siteDesignForm.title} onChanged={this._handleInputChange('siteDesignForm', 'title')} />
-                      <TextField label="Description" value={this.state.siteDesignForm.description} onChanged={this._handleInputChange('siteDesignForm', 'description')} />
-                      <TextField label="Web Template" value={this.state.siteDesignForm.webTemplate} onChanged={this._handleInputChange('siteDesignForm', 'webTemplate')} />
-                      <TextField label="Preview Image URL" value={this.state.siteDesignForm.previewImageUrl} onChanged={this._handleInputChange('siteDesignForm', 'previewImageUrl')} />
-                      <TextField label="Preview Image Alt Text" value={this.state.siteDesignForm.previewImageAltText} onChanged={this._handleInputChange('siteDesignForm', 'previewImageAltText')} />
+                      <TextField label="Title" value={siteDesignForm.title} onChanged={this._handleInputChange('siteDesignForm', 'title')} />
+                      <TextField label="Description" value={siteDesignForm.description} onChanged={this._handleInputChange('siteDesignForm', 'description')} />
+                      <TextField label="Web Template" value={siteDesignForm.webTemplate} onChanged={this._handleInputChange('siteDesignForm', 'webTemplate')} />
+                      <TextField label="Preview Image URL" value={siteDesignForm.previewImageUrl} onChanged={this._handleInputChange('siteDesignForm', 'previewImageUrl')} />
+                      <TextField label="Preview Image Alt Text" value={siteDesignForm.previewImageAltText} onChanged={this._handleInputChange('siteDesignForm', 'previewImageAltText')} />
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <div><h4>Available Site Scripts</h4></div>
                         <div><h4>Added to Site Design</h4></div>
