@@ -1,5 +1,11 @@
 @import '~@microsoft/sp-office-ui-fabric-core/dist/sass/SPFabricCore.scss';
 
+:global {
+  .fa-chevron-right {
+    margin-right: 1rem;
+  }
+}
+
 .spSiteDesigner {
   .container {
     // max-width: 700px;
@@ -25,6 +31,9 @@
   .sidebar {
     @include ms-Grid-col;
     @include ms-lg4;
+    background: #fafafa;
+    border-right: 1px solid #ddd;
+    height: 100vh;
   }
 
   .main {
@@ -35,15 +44,20 @@
   .actionCount {
     background: #f3f3f3;
     border-radius: 4px;
-    padding: 5px;
-    max-width: 60px;
+    padding: 5px 1rem;
     text-align: center;
     .actionCountLabel {
       font-size: 80%;
+      margin-right: 8px;
+      position: relative;
+      top: -1px;
     }
     .actionCountValue {
       font-weight: bold;
       margin-right: 5px;
+      min-width: 1rem;
+      display: inline-block;
+      text-align: right;
     }
     .actionLimit {
       margin-left: 5px;
@@ -65,6 +79,11 @@
   }
 
   .sidebarTitle {
+    @include ms-fontWeight-light;
+    @include ms-fontSize-m;
+  }
+
+  .sidebarLimitCount {
     @include ms-fontWeight-light;
     @include ms-fontSize-m;
   }
@@ -91,12 +110,36 @@
     }
   }
 
+  .dFlex {
+    display: flex;
+  }
+
+  .justifyContentEnd {
+    justify-content: flex-end;
+  }
+
+  .justifyContentBetween {
+    justify-content: space-between;
+  }
+
+  .alignItemsCenter {
+    align-items: center;
+  }
+
   .mt3 {
     margin-top: 1rem;
   }
 
+  .ml2 {
+    margin-left: 0.5rem;
+  }
+
   .mr2 {
     margin-right: 0.5rem;
+  }
+
+  .pl3 {
+    padding-left: 1rem;
   }
 
   .p5 {

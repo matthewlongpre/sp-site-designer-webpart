@@ -9,7 +9,7 @@ import {
 
 import * as strings from 'SpSiteDesignerWebPartStrings';
 import SpSiteDesigner from './components/SpSiteDesigner';
-import { ISpSiteDesignerProps } from './components/ISpSiteDesignerProps';
+import { ISpSiteDesignerProps } from './types/ISpSiteDesignerProps';
 
 export interface ISpSiteDesignerWebPartProps {
   description: string;

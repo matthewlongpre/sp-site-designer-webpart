@@ -1,43 +1,28 @@
 import * as React from 'react';
 import styles from './SpSiteDesigner.module.scss';
-import { ISpSiteDesignerProps } from './ISpSiteDesignerProps';
-import { escape } from '@microsoft/sp-lodash-subset';
-import { SPHttpClient, ISPHttpClientOptions, SPHttpClientConfiguration, SPHttpClientResponse } from '@microsoft/sp-http';
+import { ISpSiteDesignerProps } from '../types/ISpSiteDesignerProps';
+import { ISpSiteDesignerState } from '../types/ISpSiteDesignerState';
+
+import { SPHttpClient, ISPHttpClientOptions } from '@microsoft/sp-http';
 
 import { TextField } from 'office-ui-fabric-react/lib/TextField';
 import { DefaultButton, IButtonProps } from 'office-ui-fabric-react/lib/Button';
 import { Pivot, PivotItem } from 'office-ui-fabric-react/lib/Pivot';
-import { Label } from 'office-ui-fabric-react/lib/Label';
-
 
 import MonacoEditor from 'react-monaco-editor';
-
 import DualListBox from 'react-dual-listbox';
 import 'react-dual-listbox/lib/react-dual-listbox.css';
 
-import SiteScriptForm from './SiteScriptForm';
-
-const actionLimit: number = 30;
-
-export interface ISpSiteDesignerState {
-  siteScriptResults?: any;
-  siteDesignResults?: any;
-  siteDesignTitle?: string;
-  selectedSiteDesignID?: string;
-  siteDesignDescription?: string;
-  siteDesignWebTemplate?: string;
-  siteDesignPreviewImageUrl?: string;
-  siteDesignPreviewImageAltText?: string;
-  selectedSiteScriptID?: any;
-  loading?: boolean;
-  siteScriptForm?: {
-    title?: string;
-    content?: any;
-    description?: string;
-  };
-  siteDesignForm?: any;
-  siteScriptActionCount: number;
-}
+const config = {
+  siteScripts: {
+    perTenant: 30,
+    characterLimit: 20000
+  },
+  siteDesigns: {
+    perTenant: 20,
+    actionLimit: 30
+  }
+};
 
 export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps, ISpSiteDesignerState> {
   constructor(props: any) {
@@ -58,7 +43,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
         previewImageAltText: "",
         selectedSiteScripts: []
       },
-      siteScriptActionCount: null
+      siteScriptActionCount: 0
     };
     this._handleInputChange = this._handleInputChange.bind(this);
     this._handleEditorChange = this._handleEditorChange.bind(this);
@@ -227,6 +212,9 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteDesignMetadata`,
       id
     ).then((response) => {
+
+      this._countSiteScriptActions(response.SiteScriptIds);
+
       this.setState({
         selectedSiteDesignID: response.Id,
         siteDesignForm: {
@@ -240,7 +228,6 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       });
     });
   }
-
 
   private _handleGetSiteScriptClick(): any {
     this._getSiteScripts();
@@ -320,6 +307,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
   public editorDidMount(editor, monaco) {
     editor.focus();
   }
+
   public _handleEditorChange(newValue, e) {
     this.setState(state => ({
       siteScriptForm: {
@@ -365,6 +353,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
 
   public _clearSiteDesignForm() {
     this.setState({
+      siteScriptActionCount: 0,
       siteDesignForm: {
         title: "",
         description: "",
@@ -376,9 +365,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     });
   }
 
-  public _countSiteScriptActions() {
-    // site script IDs to check
-    const siteScripts = this.state.siteDesignForm.selectedSiteScripts;
+  public _countSiteScriptActions(siteScripts) {
     let requestList = [];
 
     for (let i: number = 0; i < siteScripts.length; i++) {
@@ -391,10 +378,18 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     Promise.all(requestList)
       .then((response) => {
         let actionCount: number = 0;
+        let subactionsCount: number = 0;
         for (let i: number = 0; i < response.length; i++) {
           const siteScript = response[i];
           const siteScriptObj = JSON.parse(siteScript.Content);
+          for (let j: number = 0; j < siteScriptObj.actions.length; j++) {
+            let action = siteScriptObj.actions[j];
+            if ('subactions' in action) {
+              subactionsCount += action.subactions.length;
+            }
+          }
           actionCount += siteScriptObj.actions.length;
+          actionCount += subactionsCount;
         }
         this.setState({
           siteScriptActionCount: actionCount
@@ -452,7 +447,12 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
               <div className={styles.row}>
                 <div className={styles.sidebar}>
                   <div>
-                    <h2 className={styles.sidebarTitle}>Your Site Scripts</h2>
+                    <div className={`${styles.dFlex} ${styles.alignItemsCenter} ${styles.justifyContentBetween}`}>
+                      <h2 className={styles.sidebarTitle}>Your Site Scripts</h2>
+                      <span className={styles.sidebarLimitCount}>
+                        {siteDesignResults && siteScriptResults.length} / {config.siteScripts.perTenant}
+                      </span>
+                    </div>
                     <ul className={styles.sidebarList}>
                       {siteScriptResults && siteScriptResults.map(siteScript =>
                         <li key={siteScript.Id} title={siteScript.Title} onClick={() => this._handleSiteScriptEdit(siteScript.Id)} className={(this.state.selectedSiteScriptID === siteScript.Id && styles.selected)}>
@@ -464,7 +464,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
                     </ul>
                   </div>
                 </div>
-                <div className={styles.main}>
+                <div className={`${styles.main} ${styles.pl3}`}>
                   <div>
                     <h2 className={styles.formTitle}>{(selectedSiteScriptID ? "Edit" : "Create")} Site Script</h2>
                     <form onSubmit={this._handleSiteScriptFormSubmit}>
@@ -483,8 +483,10 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
                           editorDidMount={this.editorDidMount}
                         />
                       </div>
-                      <DefaultButton text="Save" type="Submit" primary={true} className={`${styles.mt3} ${styles.mr2}`} />
-                      {selectedSiteScriptID && <DefaultButton text="Delete" onClick={() => this._handleDeleteSiteScript(this.state.selectedSiteScriptID)} className={styles.mt3} />}
+                      <div className={`${styles.dFlex} ${styles.justifyContentEnd}`}>
+                        {selectedSiteScriptID && <DefaultButton text="Delete" onClick={() => this._handleDeleteSiteScript(this.state.selectedSiteScriptID)} className={styles.mt3} />}
+                        <DefaultButton text="Save" type="Submit" primary={true} className={`${styles.mt3} ${styles.ml2}`} />
+                      </div>
                     </form>
                   </div>
                 </div>
@@ -499,7 +501,12 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
               <div className={styles.row}>
                 <div className={styles.sidebar}>
                   <div>
-                    <h2 className={styles.sidebarTitle}>Your Site Designs</h2>
+                    <div className={`${styles.dFlex} ${styles.alignItemsCenter} ${styles.justifyContentBetween}`}>
+                      <h2 className={styles.sidebarTitle}>Your Site Designs</h2>
+                      <span className={styles.sidebarLimitCount}>
+                        {siteDesignResults && siteDesignResults.length} / {config.siteDesigns.perTenant}
+                      </span>
+                    </div>
                     <ul className={styles.sidebarList}>
                       {siteDesignResults && siteDesignResults.map(siteDesign =>
                         <li key={siteDesign.Id} title={siteDesign.Title} onClick={() => this._handleSiteDesignEdit(siteDesign.Id)} className={(this.state.selectedSiteDesignID === siteDesign.Id && styles.selected)}>
@@ -511,13 +518,14 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
                     </ul>
                   </div>
                 </div>
-                <div className={styles.main}>
+                <div className={`${styles.main} ${styles.pl3}`}>
                   <div>
-                    <h2 className={styles.formTitle}>{(selectedSiteDesignID ? "Edit" : "Create")} Site Design</h2>
-                    {selectedSiteDesignID && this._countSiteScriptActions()}
-                    <div className={`${styles.actionCount} ${this._actionCountFormat(siteScriptActionCount)}`}>
-                      <div className={styles.actionCountLabel}>Actions:</div>
-                      <span className={styles.actionCountValue}>{siteScriptActionCount}</span>/<span className={styles.actionLimit}>{actionLimit}</span>
+                    <div className={`${styles.dFlex} ${styles.justifyContentBetween} ${styles.alignItemsCenter}`}>
+                      <h2 className={styles.formTitle}>{(selectedSiteDesignID ? "Edit" : "Create")} Site Design</h2>
+                      <div className={`${styles.actionCount} ${this._actionCountFormat(siteScriptActionCount)}`}>
+                        <span className={styles.actionCountLabel}>Actions:</span>
+                        <span className={styles.actionCountValue}>{siteScriptActionCount}</span>/<span className={styles.actionLimit}>{config.siteDesigns.actionLimit}</span>
+                      </div>
                     </div>
                     <form onSubmit={this._handleSiteDesignFormSubmit}>
                       <TextField label="Title" value={this.state.siteDesignForm.title} onChanged={this._handleInputChange('siteDesignForm', 'title')} />
@@ -544,8 +552,10 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
                           }));
                         }}
                       />}
-                      <DefaultButton text="Save" type="Submit" primary={true} className={`${styles.mt3} ${styles.mr2}`} />
-                      {selectedSiteDesignID && <DefaultButton text="Delete" onClick={() => this._handleDeleteSiteDesign(this.state.selectedSiteDesignID)} className={styles.mt3} />}
+                      <div className={`${styles.dFlex} ${styles.justifyContentEnd}`}>
+                        {selectedSiteDesignID && <DefaultButton text="Delete" onClick={() => this._handleDeleteSiteDesign(this.state.selectedSiteDesignID)} className={styles.mt3} />}
+                        <DefaultButton text="Save" type="Submit" primary={true} className={`${styles.mt3} ${styles.ml2}`} />
+                      </div>
                     </form>
                   </div>
                 </div>
