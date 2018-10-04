@@ -94,7 +94,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       }
     };
     return this.props.context.spHttpClient.post(restUrl, SPHttpClient.configurations.v1, options).then((response) => {
-      if (response.status == 204) {
+      if (response.status === 204) {
         return {};
       } else {
         return response.json();
@@ -442,7 +442,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
           <PivotItem headerText="Site Scripts">
             <div className={styles.container}>
               <div className={styles.row}>
-                {selectedSiteScriptID && <DefaultButton text="Create a New Site Script" primary={true} onClick={() => this._handleNewSiteScriptClick()} />}
+                <DefaultButton text="Create a New Site Script" primary={true} onClick={() => this._handleNewSiteScriptClick()} />
               </div>
               <div className={styles.row}>
                 <div className={styles.sidebar}>
@@ -496,7 +496,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
           <PivotItem headerText="Site Designs">
             <div className={styles.container}>
               <div className={styles.row}>
-                {selectedSiteDesignID && <DefaultButton text="Create a New Site Design" primary={true} onClick={() => this._handleNewSiteDesignClick()} />}
+                <DefaultButton text="Create a New Site Design" primary={true} onClick={() => this._handleNewSiteDesignClick()} />
               </div>
               <div className={styles.row}>
                 <div className={styles.sidebar}>
