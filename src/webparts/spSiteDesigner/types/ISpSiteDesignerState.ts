@@ -9,6 +9,7 @@ export interface ISpSiteDesignerState {
     siteDesignPreviewImageAltText?: string;
     selectedSiteScriptID?: any;
     loading?: boolean;
+    siteScriptCharacterCount?: number;
     siteScriptForm?: {
         title?: string;
         content?: any;

@@ -30,6 +30,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     this.state = {
       siteScriptResults: null,
       loading: true,
+      siteScriptCharacterCount: 0,
       siteScriptForm: {
         title: "",
         content: "",
@@ -140,7 +141,9 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       `/_api/Microsoft.Sharepoint.Utilities.WebTemplateExtensions.SiteScriptUtility.GetSiteScriptMetadata`,
       id
     ).then((response) => {
+      const siteScriptCharacterCount: number = this._countSiteScriptCharacters(response.Content);
       this.setState({
+        siteScriptCharacterCount: siteScriptCharacterCount,
         selectedSiteScriptID: response.Id,
         siteScriptForm: {
           title: response.Title,
@@ -308,8 +311,15 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
     editor.focus();
   }
 
+  public _countSiteScriptCharacters(siteScript) {
+    siteScript = siteScript.split("");
+    return siteScript.length;
+  }
+
   public _handleEditorChange(newValue, e) {
+    const siteScriptCharacterCount: number = this._countSiteScriptCharacters(newValue);
     this.setState(state => ({
+      siteScriptCharacterCount: siteScriptCharacterCount,
       siteScriptForm: {
         ...state.siteScriptForm,
         content: newValue
@@ -415,7 +425,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
 
   public render(): React.ReactElement<ISpSiteDesignerProps> {
 
-    const { loading, siteScriptResults, siteDesignResults, siteDesignForm, siteScriptForm, selectedSiteScriptID, selectedSiteDesignID, siteScriptActionCount } = this.state;
+    const { loading, siteScriptResults, siteDesignResults, siteDesignForm, siteScriptForm, selectedSiteScriptID, selectedSiteDesignID, siteScriptActionCount, siteScriptCharacterCount } = this.state;
 
     const options = {
       selectOnLineNumbers: true
@@ -471,7 +481,16 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
                       <TextField label="Title" value={siteScriptForm.title} onChanged={this._handleInputChange('siteScriptForm', 'title')} />
                       {selectedSiteScriptID && <TextField label="Description" value={siteScriptForm.description} onChanged={this._handleInputChange('siteScriptForm', 'description')} />}
                       <div>
-                        <div className={styles.p5}>JSON</div>
+
+
+                        <div className={`${styles.dFlex} ${styles.alignItemsCenter} ${styles.justifyContentBetween}`}>
+                          <div className={styles.p5}>JSON</div>
+                          <span className={styles.sidebarLimitCount}>
+                            {siteScriptResults && siteScriptCharacterCount} / {config.siteScripts.characterLimit}
+                          </span>
+                        </div>
+
+
                         <MonacoEditor
                           width="100%"
                           height="300"
