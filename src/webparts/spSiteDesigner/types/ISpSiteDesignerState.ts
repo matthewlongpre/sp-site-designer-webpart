@@ -14,6 +14,7 @@ export interface ISpSiteDesignerState {
         title?: string;
         content?: any;
         description?: string;
+        id?: string;
     };
     siteDesignForm?: any;
     siteScriptActionCount: number;

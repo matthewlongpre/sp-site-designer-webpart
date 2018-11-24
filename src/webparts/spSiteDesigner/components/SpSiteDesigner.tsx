@@ -34,7 +34,8 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       siteScriptForm: {
         title: "",
         content: "",
-        description: ""
+        description: "",
+        id: ""
       },
       siteDesignForm: {
         title: "",
@@ -42,7 +43,8 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
         webTemplate: "",
         previewImageUrl: "",
         previewImageAltText: "",
-        selectedSiteScripts: []
+        selectedSiteScripts: [],
+        id: ""
       },
       siteScriptActionCount: 0
     };
@@ -98,6 +100,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       if (response.status === 204) {
         return {};
       } else {
+        console.log(response);
         return response.json();
       }
     });
@@ -148,7 +151,8 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
         siteScriptForm: {
           title: response.Title,
           content: response.Content,
-          description: response.Description
+          description: response.Description,
+          id: response.Id
         }
       });
     });
@@ -226,7 +230,8 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
           selectedSiteScripts: response.SiteScriptIds,
           webTemplate: response.WebTemplate,
           previewImageUrl: response.PreviewImageUrl,
-          previewImageAltText: response.PreviewImageAltText
+          previewImageAltText: response.PreviewImageAltText,
+          id: response.Id
         }
       });
     });
@@ -356,7 +361,8 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
       siteScriptForm: {
         title: "",
         content: "",
-        description: ""
+        description: "",
+        id: ""
       }
     });
   }
@@ -370,7 +376,8 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
         webTemplate: "",
         previewImageUrl: "",
         previewImageAltText: "",
-        selectedSiteScripts: []
+        selectedSiteScripts: [],
+        id: ""
       }
     });
   }
@@ -480,6 +487,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
                     <form onSubmit={this._handleSiteScriptFormSubmit}>
                       <TextField label="Title" value={siteScriptForm.title} onChanged={this._handleInputChange('siteScriptForm', 'title')} />
                       {selectedSiteScriptID && <TextField label="Description" value={siteScriptForm.description} onChanged={this._handleInputChange('siteScriptForm', 'description')} />}
+                      {selectedSiteScriptID && <TextField disabled label="ID" value={siteScriptForm.id} onChanged={this._handleInputChange('siteScriptForm', 'id')} />}
                       <div>
 
 
@@ -552,6 +560,7 @@ export default class SpSiteDesigner extends React.Component<ISpSiteDesignerProps
                       <TextField label="Web Template" value={siteDesignForm.webTemplate} onChanged={this._handleInputChange('siteDesignForm', 'webTemplate')} />
                       <TextField label="Preview Image URL" value={siteDesignForm.previewImageUrl} onChanged={this._handleInputChange('siteDesignForm', 'previewImageUrl')} />
                       <TextField label="Preview Image Alt Text" value={siteDesignForm.previewImageAltText} onChanged={this._handleInputChange('siteDesignForm', 'previewImageAltText')} />
+                      <TextField disabled label="ID" value={siteDesignForm.id} onChanged={this._handleInputChange('siteDesignForm', 'id')} />
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <div><h4>Available Site Scripts</h4></div>
                         <div><h4>Added to Site Design</h4></div>
